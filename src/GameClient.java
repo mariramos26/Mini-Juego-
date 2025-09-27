@@ -2,45 +2,73 @@ import java.io.*;
 import java.net.*;
 import java.util.Scanner;
 
-// Cliente simple que se conecta al servidor y permite enviar comandos por consola
 public class GameClient {
-    public static void main(String[] args) throws IOException {
-        String host = "localhost"; // cambiar si el server está en otra máquina
+    
+    
+    public static void main(String[] args) {
+        String host = "10.10.11.237"; // cambiar si el server está en otra máquina
         int port = 5000;
 
-        Socket socket = new Socket(host, port);
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        try (Socket socket = new Socket(host, port);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             Scanner sc = new Scanner(System.in)) {
 
-        // Hilo lector para mensajes del servidor
-        Thread reader = new Thread(() -> {
-            try {
-                String s;
-                while ((s = in.readLine()) != null) {
-                    System.out.println("[SERVER] " + s);
+            // Hilo lector de mensajes del servidor
+            Thread reader = new Thread(() -> {
+                try {
+                    String s;
+                    while ((s = in.readLine()) != null) {
+                        System.out.println("[SERVER] " + s);
+                    }
+                } catch (IOException e) {
+                    System.out.println("Conexión cerrada por el servidor.");
                 }
-            } catch (IOException e) {
-                System.out.println("Conexión cerrada.");
-            }
-        });
-        reader.start();
+            });
+            reader.start();
 
-        Scanner sc = new Scanner(System.in);
-        System.out.print("Tu nombre: ");
-        String name = sc.nextLine();
-        out.println("NAME:" + name); // enviamos el nombre al servidor
+            // Elegir clase del personaje
+            System.out.println("Elige tu clase:");
+            System.out.println("1. Arquera (250 HP, 20-30 ATK)");
+            System.out.println("2. Guerrero (300 HP, 15-25 ATK)");
+            System.out.println("3. Mago    (200 HP, 25-40 ATK)");
+            System.out.print("Opción(Coloque el número): ");
+            int choice = Integer.parseInt(sc.nextLine());
 
-        // Bucle principal: leer comandos desde la consola y enviarlos al servidor
-        while (true) {
-            System.out.print("Comando (ATTACK/STATUS/EXIT): ");
-            String cmd = sc.nextLine().trim();
-            if (cmd.equalsIgnoreCase("EXIT")) {
-                break;
+            String type = "";
+            switch (choice) {
+                case 1 -> type = "ARQUERA";
+                case 2 -> type = "GUERRERO";
+                case 3 -> type = "MAGO";
+                default -> {
+                  System.out.println(" Opción inválida, intenta de nuevo.");
+                }
             }
-            out.println(cmd);
+
+            // Nombre del jugador
+            System.out.print("Ingresa tu nombre: ");
+            String name = sc.nextLine();
+
+            // Mandar al servidor el tipo y nombre
+            out.println("JUGADOR:" + type + ":" + name);
+
+            // Bucle principal de comandos
+            while (true) {
+                System.out.print("Comando (ATTACK/STATUS/HEAL/SPECIAL/EXIT): ");
+                String cmd = sc.nextLine().trim();
+
+                if (cmd.equalsIgnoreCase("EXIT")) {
+                    out.println("EXIT");  //  avisamos al servidor
+                    break;
+                }
+
+                out.println(cmd);
+            }
+
+            System.out.println("Saliendo del juego...");
+
+        } catch (IOException e) {
+            System.out.println("Error en cliente: " + e.getMessage());
         }
-
-        socket.close();
-        sc.close();
     }
 }
